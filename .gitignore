@@ -1,0 +1,3 @@
+appstoreCrawler/*.pyc
+appstoreCrawler/spiders/*.pyc
+appstoreCrawler/items/*.pyc

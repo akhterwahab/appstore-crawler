@@ -5,7 +5,10 @@
 
 from scrapy.item import Item, Field
 
-class AppstorecrawlerItem(Item):
+class itunesItem(Item):
     # define the fields for your item here like:
-    # name = Field()
-    pass
+    creative = Field()
+    extension = Field()
+    
+    
+    
