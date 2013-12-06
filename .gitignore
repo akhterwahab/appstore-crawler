@@ -3,3 +3,5 @@ appstoreCrawler/spiders/*.pyc
 appstoreCrawler/items/*.pyc
 dataPipeline/framework/*.pyc
 dataPipeline/*.pyc
+tests/*.pyc
+tests/framework/*.pyc
