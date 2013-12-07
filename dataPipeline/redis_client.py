@@ -9,5 +9,5 @@ class RedisClient(object):
         self.pool_ = redis.ConnectionPool(max_connections = max_connections, \
                                         host=host, port=port, db=db)
 
-    def get_instance(self):
+    def get_connection(self):
         return redis.Redis(connection_pool=self.pool_)

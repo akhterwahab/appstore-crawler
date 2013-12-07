@@ -1,8 +1,6 @@
 import logging
 import threading
 import multiprocessing
-import multiprocessing.pool
-from multiprocessing.util import Finalize, debug
 
 def execute():
     global producer_worker_

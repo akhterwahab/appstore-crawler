@@ -17,12 +17,12 @@ class EventAnalyzer(object):
         self.cfg_.read(conf_path)
         self.sign_fields_ = set(self.cfg_.get("sign", "fields").split(","))
         self.sign_key_ = self.cfg_.get("sign", "key")
-        self.redis_host_ = self.cfg_.get("redis", "host") or "127.0.0.1"
-        self.redis_port_ = int(self.cfg_.get("redis", "port")) or 6379
-        self.redis_db_ = int(self.cfg_.get("redis", "db")) or 0
-        self.redis_max_connection_ = int(self.cfg_.get("redis", "max_connection"))
-        self.redis_client_ = redis_client.RedisClient(self.redis_host_, \
-                         self.redis_port_, self.redis_db_, self.redis_max_connection_)
+        redis_host = self.cfg_.get("redis", "host") or "127.0.0.1"
+        redis_port = int(self.cfg_.get("redis", "port")) or 6379
+        redis_db = int(self.cfg_.get("redis", "db")) or 0
+        redis_max_connection = int(self.cfg_.get("redis", "max_connection"))
+        self.redis_client_ = redis_client.RedisClient(redis_host, \
+                         redis_port, redis_db, redis_max_connection)
 
     '''
     use config file "pipeline.sign_fields" check data_object is duplicate,
@@ -38,7 +38,7 @@ class EventAnalyzer(object):
                                 % ("dict", type(data_object)))
         validate_type()
         sign_value = self.get_sign(data_object)
-        redis_instance = self.redis_client_.get_instance()
+        redis_instance = self.redis_client_.get_connection()
         sign_key = str(data_object[self.sign_key_])
         redis_value = redis_instance.get(sign_key)
         if redis_value is None:
