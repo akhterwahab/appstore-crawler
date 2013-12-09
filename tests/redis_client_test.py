@@ -15,7 +15,7 @@ class RedisThread(threading.Thread):
         self.thread_id_ = thread_id
     
     def run(self):
-        ri = self.redis_client_.get_instance()
+        ri = self.redis_client_.get_connection()
         ri.set("multithread_key_%d" % self.thread_id_, \
                "multithread_value_%d" % self.thread_id_)
         
@@ -28,13 +28,13 @@ class redisClientTest(unittest.TestCase):
 
     def testcase_get_and_set(self):
         rc = redis_client.RedisClient("127.0.0.1", 6379, 0, 10)
-        ri = rc.get_instance()
+        ri = rc.get_connection()
         ri.set("key1", "value1")
         self.assertTrue("value1" == ri.get("key1"))
     
     def testcase_many_client(self):
         rc = redis_client.RedisClient("127.0.0.1", 6379, 0, 10)
-        ris = [rc.get_instance() for ix in xrange(0, 15)]
+        ris = [rc.get_connection() for ix in xrange(0, 15)]
         for ix in xrange(0, len(ris)):
             ri = ris[ix]
             ri.set("many_key_%d" % ix, "many_value_%d" % ix)
