@@ -8,24 +8,10 @@ from scrapy.contrib.loader.processor import TakeFirst, MapCompose, Join
 import json
 
 class itunesNewFreeApplicationSpider(BaseSpider):
-    creative_schema = { "name" : "trackName", \
-	      	        "app_version" : "version", \
-		        "app_name" : "trackName", \
-		        "package_name" : "bundleId", \
-			"package_size" : "fileSizeBytes", \
-			"app_store_id" : "trackId", \
-			"provider" : "artistName", \
-			"icon" : "artworkUrl60", \
-			"ad_pic" : "artworkUrl512", \
-			"screenshots" : "screenshotUrls", \
-			"url" : "trackViewUrl", \
-			"title" : "trackName", \
-			"ad_desc" : "description", \
-			"ad_desc_brief" : "description" \
-			}
 
     extension_schema = { "terms" : "genres", \
-			 "features" : "features" \
+			 "features" : "features", \
+			 "supportedDevices" : "supportedDevices", \
 		       }
  
     url_pattern = "http://itunes.apple.com/lookup?id=%s&country=CN"
@@ -61,17 +47,27 @@ class itunesNewFreeApplicationSpider(BaseSpider):
         if lookup_results.has_key("results")  \
 	    and lookup_results.has_key("resultCount") \
 	    and lookup_results["resultCount"] >= 1:
-	    #try:
-	        lookup_result = lookup_results["results"][0]
-		iItem["creative"] = creative.Creative()
-	        for key in itunesNewFreeApplicationSpider.creative_schema.keys():
-	            iItem["creative"][key] = lookup_result[itunesNewFreeApplicationSpider.creative_schema[key]]
-		iItem["extension"] = extension.Extension()
-		for key in itunesNewFreeApplicationSpider.extension_schema.keys():
-	            iItem["extension"][key] = lookup_result[itunesNewFreeApplicationSpider.extension_schema[key]]
-		
-	    #except Exception, e:
-	    #    log.msg("Create itunesItem exception: %s" % (e), level=log.WARNING)
+	    lookup_result = lookup_results["results"][0]
+	    iItem["creative"] = creative.Creative()
+	    iItem["creative"]["name"] = lookup_result["trackName"].encode("utf8")
+	    iItem["creative"]["app_version"] = lookup_result["version"].encode("utf8")
+	    iItem["creative"]["app_name"] = lookup_result["trackName"].encode("utf8")
+	    iItem["creative"]["package_name"] = lookup_result["bundleId"].encode("utf8")
+	    iItem["creative"]["package_size"] = str(lookup_result["fileSizeBytes"])
+	    iItem["creative"]["app_store_id"] = str(lookup_result["trackId"])
+	    iItem["creative"]["provider"] = lookup_result["artistName"].encode("utf8")
+	    iItem["creative"]["icon"] = lookup_result["artworkUrl60"].encode("utf8")
+	    iItem["creative"]["ad_pic"] = lookup_result["artworkUrl512"].encode("utf8")
+	    iItem["creative"]["screenshots"] = str(",".join(lookup_result["screenshotUrls"]))
+	    iItem["creative"]["url"] = lookup_result["trackViewUrl"].encode("utf8")
+	    iItem["creative"]["title"] = lookup_result["trackName"].encode("utf8")
+	    iItem["creative"]["ad_desc"] = lookup_result["description"].encode("utf8")
+	    iItem["creative"]["ad_desc_brief"] = lookup_result["description"].partition('\n')[0].encode("utf8")
+
+	    iItem["extension"] = extension.Extension()
+	    for key in itunesNewFreeApplicationSpider.extension_schema.keys():
+	        iItem["extension"][key] = lookup_result[itunesNewFreeApplicationSpider.extension_schema[key]]
+
 	else:
 	    log.msg("Fetch url: %s with no result" % (response.meta["url"]), level=log.WARNING)
         return iItem

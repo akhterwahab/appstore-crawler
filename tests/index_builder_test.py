@@ -5,6 +5,7 @@ if __name__ == "__main__":
     import sys
     sys.path.append("..")
 from dataPipeline import index_builder
+from dataPipeline import index_reader
 
 class indexerBuilderTest(unittest.TestCase): 
     def setUp(self):
@@ -31,9 +32,9 @@ class indexerBuilderTest(unittest.TestCase):
         indexer.build()
 	data_datetime = time.strftime(indexer.index_date_pattern_, time.localtime(time.time()))
         target_filepath = "%s/%s-%s" % (indexer.index_data_dir_, indexer.index_name_prefix_, data_datetime)
-	index_reader = index_builder.IndexBuilder.IndexFileReader(target_filepath)
+	reader = index_reader.IndexFileReader(target_filepath)
 	
-	(key, count, values) = index_reader.read()
+	(key, count, values) = reader.read()
 	while not key is None:
 	    self.assertTrue(checksum.has_key(key))
 	    for value in values:
@@ -41,7 +42,7 @@ class indexerBuilderTest(unittest.TestCase):
 		checksum[key].remove(value)
 	    self.assertTrue(len(checksum[key]) == 0)
 	    checksum.pop(key)
-	    (key, count, values) = index_reader.read()
+	    (key, count, values) = reader.read()
 	self.assertTrue(len(checksum) == 0)
 	os.remove(target_filepath)
 

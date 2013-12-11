@@ -1,101 +1,40 @@
 import os
 import time
 import shutil
+import logging
 import ConfigParser
+from dataPipeline import index_merger
 
 
 class IndexBuilder(object):
-
-    class IndexFileReader(object):
-	def __init__(self, filepath):
-	    self.filepath_ = filepath
-	    self.fp_ = open(filepath)
-
-        def __del__(self):
-	    self.fp_.close()
-	
-	def read(self):
-	    line = self.fp_.readline()
-	    if line:
-	        record = line.replace("\n", "").split("\t")
-	    else:
-	        record = None
-	    if record:
-	        return (record[0], int(record[1]), set(record[2:]))
-	    else:
-		return (None, 0, [])
-
-	     
     def __init__(self, conf_path):
         self.conf_path_ = conf_path 
+	self.logger_ = logging.getLogger("IndexBuilder")
         self.cfg_ = ConfigParser.ConfigParser()
         self.cfg_.read(conf_path)
         self.index_data_dir_ = self.cfg_.get("index", "data_dir")
+	self.logger_.debug("read config '[index]data_dir':" + self.index_data_dir_)
         self.index_tmp_data_dir_ = self.cfg_.get("index", "tmp_dir")
+	self.logger_.debug("read config '[index]tmp_dir':" + self.index_tmp_data_dir_)
         self.index_tmp_filepaths_ = []
         self.index_filename_id_ = 0
         self.index_date_pattern_ = self.cfg_.get("index", "date_pattern") or "%Y%m%d"
+	self.logger_.debug("read config '[index]date_pattern':" + self.index_date_pattern_)
         self.index_name_prefix_ = self.cfg_.get("index", "name_prefix")
+	self.logger_.debug("read config '[index]name_prefix':" + self.index_name_prefix_)
         self.max_index_count_ = int(self.cfg_.get("index", "max_index_count_per_file")) or 100000
+	self.logger_.debug("read config '[index]max_index_count_per_file':" + str(self.max_index_count_))
+	self.index_merger_ = index_merger.IndexMerger(self.index_tmp_data_dir_)
         self.__reset()
 
     def build(self):
         self.__flush()
-        filepath = self.__merge_sort(self.index_tmp_filepaths_)
+        filepath = self.index_merger_.merge(self.index_tmp_filepaths_)
         data_datetime = time.strftime(self.index_date_pattern_, time.localtime(time.time()))  
         target_filepath = "%s/%s-%s" % (self.index_data_dir_, self.index_name_prefix_, data_datetime)
         shutil.move(filepath, target_filepath)
+	self.index_tmp_filepaths = []
 
-    def __merge_sort(self, filepaths):
-        if len(filepaths) > 1:
-            low = 0
-            high = len(filepaths)
-            mid = (low + high) / 2
-            filepaths = (self.__merge_sort(filepaths[low:mid]), self.__merge_sort(filepaths[mid:high]))
-        return self.__merge(filepaths)
-
-    def __merge(self, filepaths):
-        if len(filepaths) == 0:
-            return ""
-        elif len(filepaths) == 1:
-            return filepaths[0]
-        else:
-            filename = self.__get_index_filename()
-            filepath = "%s/%s" % (self.index_tmp_data_dir_, filename)
-            fp = open(filepath, "w") 
-            left_filepath = filepaths[0] 
-            right_filepath = filepaths[1]
-            left_reader = IndexBuilder.IndexFileReader(left_filepath)
-            right_reader = IndexBuilder.IndexFileReader(right_filepath)
-            (l_key, l_valuec, l_values) = left_reader.read()
-            (r_key, r_valuec, r_values) = right_reader.read()
-            while True:
-                if l_key and r_key:
-                    if l_key < r_key:
-                        fp.write("%s\t%d\t%s\n" % (l_key, l_valuec, "\t".join(l_values)))
-                        (l_key, l_valuec, l_values) = left_reader.read()
-                    elif l_key > r_key:
-                        fp.write("%s\t%d\t%s\n" % (r_key, r_valuec, "\t".join(r_values)))
-                        (r_key, r_valuec, r_values) = right_reader.read()
-                    else:
-                        union_values = l_values.union(r_values)
-                        fp.write("%s\t%d\t%s\n" % (r_key, len(union_values), "\t".join(sorted(union_values))))
-                        (l_key, l_valuec, l_values) = left_reader.read()
-                        (r_key, r_valuec, r_values) = right_reader.read()
-                elif not l_key and not r_key:
-                    break
-                elif l_key and not r_key:
-                    fp.write("%s\t%d\t%s\n" % (l_key, l_valuec, "\t".join(l_values)))
-                    (l_key, l_valuec, l_values) = left_reader.read()
-                elif r_key and not l_key:
-                    fp.write("%s\t%d\t%s\n" % (r_key, r_valuec, "\t".join(r_values)))
-                    (r_key, r_valuec, r_values) = right_reader.read()
-            fp.flush()
-            fp.close()
-	    self.index_filename_id_ += 1
-            os.remove(left_filepath)
-            os.remove(right_filepath)
-            return filepath
              
     def __get_index_filename(self): 
         return "%s.tmp-%d" % (self.index_name_prefix_, \
@@ -110,8 +49,8 @@ class IndexBuilder(object):
             filepath = "%s/%s" % (self.index_tmp_data_dir_, filename)
             fp = open(filepath, "w")
             for key in sorted(self.index_["index"].keys()):
-                fp.write("%s\t%d\t%s\n" % (str(key), self.index_["index"][key][0], \
-                            "\t".join(sorted(self.index_["index"][key][1]))))
+		record =  "%s\t%s\t%s\n" % (key, self.index_["index"][key][0], "\t".join(sorted(self.index_["index"][key][1])))
+		fp.write(record.encode('utf8'))
             fp.close()
             self.index_filename_id_ += 1
             self.index_tmp_filepaths_.append(filepath)

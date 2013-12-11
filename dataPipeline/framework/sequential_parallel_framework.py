@@ -1,6 +1,7 @@
 import logging
 import threading
 import multiprocessing
+import traceback
 
 def execute():
     global producer_worker_
@@ -12,6 +13,10 @@ class SequentialParallelFramework(object):
     class InvalidArgumentException(Exception): pass
 
     def run(self):
+	self.producer_.produce_begin()
+	self.processor_.process_begin()
+	self.consumer_.consume_begin()
+
         self.producer_worker_.start()
         for ix in xrange(0, self.thread_size_):
             self.processor_workers_[ix].start()
@@ -23,8 +28,12 @@ class SequentialParallelFramework(object):
             for ix in xrange(0, self.thread_size_):
                 self.processor_workers_[ix].join()
             self.consumer_worker_.join()
-        except:
-            self.logger_.fatal("SequentialParallelFramework join encounter a exception: %s" % str(e))
+	    self.producer_.produce_end()
+	    self.processor_.process_end()
+	    self.consumer_.consume_end()
+        except Exception, e:
+            self.logger_.fatal("SequentialParallelFramework join encounter a exception: %s, "\
+				"traceback: %s" % (str(e), traceback.format_exc()))
 
     def __init__(self, producer, processor, \
                     consumer, thread_size, queue_size, \
@@ -58,6 +67,11 @@ class SequentialParallelFramework(object):
 
         validate_argument()
         validate_type()
+
+	self.producer_ = producer
+	self.processor_ = processor
+	self.consumer_ = consumer
+
         self.logger_ = logging.getLogger("SequentialParallelFramework")
         self.thread_size_ = thread_size
         self.queue_size_ = queue_size
@@ -116,7 +130,7 @@ class SequentialParallelFramework(object):
                        try:
                            future = self.executor_.apply_async(execute)
                            element = future.get(self.timeout_)
-                           if element is None:
+                           if not element:
                                self.framework_.is_producer_running_ = False
                                break
                            else:
@@ -131,12 +145,14 @@ class SequentialParallelFramework(object):
                                self.logger_.warn("Producer produce nothing in %d s, " \
                                                  "but the queue is empty, wait an element", self.timeout_)
                        except Exception, e:
-                           self.logger_.warn("Producer produce encount a exception: %s" % str(e))
+                           self.logger_.warn("Producer produce encount a exception: %s, " \
+						"traceback: %s" % (str(e), traceback.format_exc()))
                    self.logger_.debug("ProducerWorker release queue[%d] FULL semaphore", queue_id)
                    self.framework_.queue_full_sems_[queue_id].release()
                    queue_id = (queue_id + 1) % self.framework_.thread_size_
             except Exception, e:
-                self.logger_.fatal("ProducerWorker encount a exception: %s" % str(e))
+                self.logger_.fatal("ProducerWorker encount a exception: %s, " \
+					"traceback: %s" % (str(e), traceback.format_exc()))
             finally :
                 self.framework_.is_producer_running_ = False
                 self.logger_.info("ProducerWorker thread exit")
@@ -168,14 +184,14 @@ class SequentialParallelFramework(object):
                             c_element = self.processor_.process(p_element)
                             self.framework_.consumer_element_queues_[self.thread_id_].enqueue(c_element)
                         except Exception, e:
-                            self.logger_.warn("ProcessWorer[%d] process element encouter a exception: %s"
-                                    % (self.thread_id_, str(e)))
+                            self.logger_.warn("ProcessWorer[%d] process element encouter a exception: %s, " \
+						"traceback: %s" % (self.thread_id_, str(e), traceback.format_exc()))
                     self.logger_.debug("ProcessorWorker[%d] release queue[%d] READY semaphore"
                                     % (self.thread_id_, self.thread_id_))
                     self.framework_.queue_ready_sems_[self.thread_id_].release()
             except Exception, e:
-                self.logger_.fatal("ProcessorWorker[%d] encounter a exception: %s"
-                        % (self.thread_id_, str(e)))
+                self.logger_.fatal("ProcessorWorker[%d] encounter a exception: %s, " \
+						"traceback: %s" % (self.thread_id_, str(e), traceback.format_exc()))
             finally:
                 self.framework_.is_processor_running_[self.thread_id_] = False
                 self.framework_.is_framework_running_ = False
@@ -205,13 +221,15 @@ class SequentialParallelFramework(object):
                             element = self.framework_.consumer_element_queues_[queue_id].dequeue()
                             self.consumer_.consume(element)
                         except Exception, e:
-                            self.logger_.warn("ConsumerWorker consume a element encounter an exception: " % (queue_id, str(e)))
+                            self.logger_.warn("ConsumerWorker consume a element encounter an exception: %s, " \
+						"traceback: %s" % (str(e), traceback.format_exc()))
                         self.logger_.debug("ConsumerWorker release queue[%d] EMPTY semaphore" \
                             % (queue_id))
                     self.framework_.queue_empty_sems_[queue_id].release()
                     queue_id = (queue_id + 1) % self.framework_.thread_size_
             except Exception, e:
-                self.logger_.fatal("ConsumerWorker encounter a exception: " % (queue_id, str(e)))
+                self.logger_.fatal("ConsumerWorker encounter a exception: %s, " \
+						"traceback: %s" % (str(e), traceback.format_exc()))
             finally:
                 self.framework_.isConsumerRunning_ = False
                 self.framework_.isFrameworkRunning_ = False
@@ -222,25 +240,41 @@ class SequentialParallelFramework(object):
         def __init__(self):
             pass
 
-        def __getinitargs__(self):
-            return self.__dict__().keys()
-
+	def produce_begin(self):
+	    raise SequentialParallelFramework.UmimplementedException("Producer.produce_begin is a pure interface.")
+	    
         def produce(self):
             raise SequentialParallelFramework.UmimplementedException("Producer.produce is a pure interface.")
+
+	def produce_end(self):
+	    raise SequentialParallelFramework.UmimplementedException("Producer.produce_end is a pure interface.")
+
 
     class Processor(object):
         def __init__(self):
             pass
 
+	def process_begin(self):
+	    raise SequentialParallelFramework.UmimplementedException("Processor.process_begin is a pure interface.")
+	    
         def process(self):
             raise SequentialParallelFramework.UmimplementedException("Processor.process is a pure interface.")
+
+	def process_end(self):
+	    raise SequentialParallelFramework.UmimplementedException("Processor.process_end is a pure interface.")
 
     class Consumer(object):
         def __init__(self):
             pass
 
+        def consume_begin(self):
+            raise SequentialParallelFramework.UmimplementedException("Consumer.consume_begin is a pure interface.")
+
         def consume(self):
             raise SequentialParallelFramework.UmimplementedException("Consumer.consume is a pure interface.")
+
+        def consume_end(self):
+            raise SequentialParallelFramework.UmimplementedException("Consumer.consume_end is a pure interface.")
 
     class CircleQueue(object):
         def __init__(self, max_element_size):

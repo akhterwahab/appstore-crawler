@@ -14,5 +14,10 @@ fi
 
 for SPIDER in ${TODO_SPIDER[@]}; do
     scrapy crawl ${SPIDER} -o ${CRAWL_DATA_DIR}/${SPIDER}-${FILE_HOUR_DATE}.dat --logfile=${LOG_DIR}/${SPIDER}-${FILE_DATE}.log --loglevel=INFO
+    if [ $? -eq 0 ]; then
+	echo "${SPIDER}-${FILE_HOUR_DATE}.dat" >> ${CRAWL_DATA_DIR}/.index.tmp
+	mv ${CRAWL_DATA_DIR}/.index.tmp ${CRAWL_DATA_DIR}/${SPIDER}.index
+    fi
 done
+
 
