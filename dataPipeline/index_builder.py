@@ -24,7 +24,9 @@ class IndexBuilder(object):
 	self.logger_.debug("read config '[index]name_prefix':" + self.index_name_prefix_)
         self.max_index_count_ = int(self.cfg_.get("index", "max_index_count_per_file")) or 100000
 	self.logger_.debug("read config '[index]max_index_count_per_file':" + str(self.max_index_count_))
-	self.index_merger_ = index_merger.IndexMerger(self.index_tmp_data_dir_)
+	self.index_filename_ = self.cfg_.get("index", "index_filename")
+	self.logger_.debug("read config '[index]index_filename':" + str(self.index_filename_))
+	self.index_merger_ = index_merger.IndexMerger(self.index_tmp_data_dir_, True)
         self.__reset()
 
     def build(self):
@@ -34,7 +36,13 @@ class IndexBuilder(object):
         target_filepath = "%s/%s-%s" % (self.index_data_dir_, self.index_name_prefix_, data_datetime)
         shutil.move(filepath, target_filepath)
 	self.index_tmp_filepaths = []
-
+ 
+	tmp_index_path = "%s/.%s.index.tmp" % (self.index_data_dir_, self.index_name_prefix_)
+	f = open(tmp_index_path, "w")
+	f.write("%s\n" % target_filepath)
+	f.close()
+	target_indexfile_path = "%s/%s" % (self.index_data_dir_, self.index_filename_)
+	shutil.move(tmp_index_path, target_indexfile_path) 
              
     def __get_index_filename(self): 
         return "%s.tmp-%d" % (self.index_name_prefix_, \

@@ -1,11 +1,17 @@
 import os
 import logging
+import shutil
+import sys
+if __name__ == '__main__':
+    sys.path.append(".")
 from dataPipeline import index_reader
 
 class IndexMerger(object):
-    def __init__(self, tmp_data_dir):
+    def __init__(self, tmp_data_dir, auto_delete):
+	self.logger_ = logging.getLogger("IndexMerger")
         self.merge_id_ = 0
         self.index_tmp_data_dir_ = tmp_data_dir
+	self.auto_delete_ = auto_delete
         
     def merge(self, filepaths):
         return self.__merge_sort(filepaths)
@@ -64,8 +70,26 @@ class IndexMerger(object):
             right_reader.close()
             fp.flush()
             fp.close()
-            os.remove(left_filepath)
-            os.remove(right_filepath)
+	    if self.auto_delete_:
+                os.remove(left_filepath)
+                os.remove(right_filepath)
 
             return filepath
+
+if __name__ == '__main__':
+    if len(sys.argv) <= 3:
+	print "usage: "
+    else:
+	tmp_path = sys.argv[1]
+	auto_delete = bool(sys.argv[2] == 'True') or False
+	desc_path = sys.argv[3]
+	filepaths = sys.argv[4:]
+        merger = IndexMerger(tmp_path, auto_delete)
+	filepath = merger.merge(filepaths)
+	if filepath:
+	    shutil.move(filepath, desc_path)
+	
+
+        
+    
 
