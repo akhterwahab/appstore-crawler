@@ -1,6 +1,6 @@
 FILE_DATE=`date  +%Y%m%d`
 FILE_HOUR_DATE=`date +%Y%m%d%H`
-CRAWL_DATA_DIR=data
+CRAWL_DATA_DIR=data/crawl-data
 LOG_DIR=log
 
 TODO_SPIDER=(itunesNewFreeApplication) 
