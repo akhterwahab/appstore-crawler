@@ -34,15 +34,18 @@ class IndexBuilder(object):
         filepath = self.index_merger_.merge(self.index_tmp_filepaths_)
         data_datetime = time.strftime(self.index_date_pattern_, time.localtime(time.time()))  
         target_filepath = "%s/%s-%s" % (self.index_new_dir_, self.index_new_prefix_, data_datetime)
-        shutil.move(filepath, target_filepath)
-	self.index_tmp_filepaths = []
+	if filepath:
+            shutil.move(filepath, target_filepath)
+	    self.index_tmp_filepaths = []
  
-	tmp_index_path = "%s/.%s.index.tmp" % (self.index_new_dir_, self.index_new_prefix_)
-	f = open(tmp_index_path, "w")
-	f.write("%s\n" % target_filepath)
-	f.close()
-	target_indexfile_path = "%s/%s" % (self.index_new_dir_, self.index_new_filename_)
-	shutil.move(tmp_index_path, target_indexfile_path) 
+	    tmp_index_path = "%s/.%s.index.tmp" % (self.index_new_dir_, self.index_new_prefix_)
+	    f = open(tmp_index_path, "w")
+	    f.write("%s\n" % target_filepath)
+	    f.close()
+	    target_indexfile_path = "%s/%s" % (self.index_new_dir_, self.index_new_filename_)
+	    shutil.move(tmp_index_path, target_indexfile_path) 
+	else:
+	    self.logger_.warning("merge filepath is empty")
              
     def __get_index_filename(self): 
         return "%s.tmp-%d" % (self.index_new_prefix_, \
